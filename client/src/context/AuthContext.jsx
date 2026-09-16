@@ -19,24 +19,18 @@ export const AuthProvider = ({ children }) => {
         return;
       }
 
-      if (token.startsWith('demo-jwt-token-')) {
-        const savedUser = localStorage.getItem('secure_exam_user');
-        if (savedUser) {
-          setUser(JSON.parse(savedUser));
-        }
-        setLoading(false);
-        return;
-      }
-
       try {
         const res = await api.get('/auth/me');
-        if (res.data.success) {
+        if (res.data && res.data.success) {
           setUser(res.data.user);
           localStorage.setItem('secure_exam_user', JSON.stringify(res.data.user));
         }
       } catch (err) {
         console.error('[AUTH CHECK FAILED]', err);
-        logout();
+        // Do not clear session on network glitch, only if 401
+        if (err.response && err.response.status === 401) {
+          logout();
+        }
       } finally {
         setLoading(false);
       }
@@ -88,21 +82,19 @@ export const AuthProvider = ({ children }) => {
   };
 
   const switchDemoRole = async (targetRole) => {
-    const demoUsers = {
-      'ADMIN': { id: 'demo-admin-id', name: 'System Admin', email: 'admin@secure.exam', role: 'ADMIN', status: 'ACTIVE' },
-      'SETTER': { id: 'demo-setter-id', name: 'Dr. Sarah Jenkins (Question Setter)', email: 'setter@secure.exam', role: 'SETTER', status: 'ACTIVE' },
-      'REVIEWER': { id: 'demo-reviewer-id', name: 'Prof. Robert Chen (Chief Reviewer)', email: 'reviewer@secure.exam', role: 'REVIEWER', status: 'ACTIVE' },
-      'CONTROLLER': { id: 'demo-controller-id', name: 'Exam Controller Marcus Vance', email: 'controller@secure.exam', role: 'CONTROLLER', status: 'ACTIVE' },
-      'CANDIDATE': { id: 'demo-candidate-id', name: 'Candidate Alex Turner', email: 'candidate@secure.exam', role: 'CANDIDATE', status: 'ACTIVE' }
-    };
-
-    const userData = demoUsers[targetRole] || demoUsers['ADMIN'];
-    const fakeToken = 'demo-jwt-token-' + targetRole.toLowerCase();
-
-    localStorage.setItem('secure_exam_token', fakeToken);
-    localStorage.setItem('secure_exam_user', JSON.stringify(userData));
-    setUser(userData);
-    return { success: true, user: userData };
+    try {
+      const res = await api.post('/auth/demo-switch', { role: targetRole });
+      if (res.data && res.data.success) {
+        const { token, user: userData } = res.data;
+        localStorage.setItem('secure_exam_token', token);
+        localStorage.setItem('secure_exam_user', JSON.stringify(userData));
+        setUser(userData);
+        return { success: true, user: userData };
+      }
+    } catch (err) {
+      console.error('[DEMO ROLE SWITCH FAILED]', err);
+      return { success: false, error: 'Role switch failed' };
+    }
   };
 
   return (
