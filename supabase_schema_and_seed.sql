@@ -106,3 +106,14 @@ INSERT INTO vault_audit_logs (id, user_id, role, action, ip_address, result, det
 VALUES
   ('log-init-1', 'SYSTEM', 'SYSTEM', 'SYSTEM_INITIALIZED', '127.0.0.1', 'SUCCESS', 'Database schema created and initial sample question papers seeded in Supabase.')
 ON CONFLICT (id) DO NOTHING;
+
+-- 6. Disable Row Level Security & Grant Full API Access to All Tables
+ALTER TABLE vault_users DISABLE ROW LEVEL SECURITY;
+ALTER TABLE vault_question_papers DISABLE ROW LEVEL SECURITY;
+ALTER TABLE vault_exams DISABLE ROW LEVEL SECURITY;
+ALTER TABLE vault_approvals DISABLE ROW LEVEL SECURITY;
+ALTER TABLE vault_audit_logs DISABLE ROW LEVEL SECURITY;
+ALTER TABLE vault_access_attempts DISABLE ROW LEVEL SECURITY;
+
+GRANT ALL ON ALL TABLES IN SCHEMA public TO anon, authenticated, postgres, service_role;
+
