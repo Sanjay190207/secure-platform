@@ -4,11 +4,11 @@ import { useAuth } from '../context/AuthContext';
 import { Shield, FileText, CheckSquare, Clock, UserCheck, Zap } from 'lucide-react';
 
 const roles = [
-  { id: 'ADMIN', label: 'SIEM Admin', icon: Shield, color: '#f43f5e', path: '/admin/dashboard' },
-  { id: 'SETTER', label: 'Paper Setter', icon: FileText, color: '#38bdf8', path: '/setter/dashboard' },
-  { id: 'REVIEWER', label: 'Chief Reviewer', icon: CheckSquare, color: '#a855f7', path: '/reviewer/dashboard' },
+  { id: 'SETTER', label: 'Question Setter', icon: FileText, color: '#38bdf8', path: '/setter/dashboard' },
+  { id: 'REVIEWER', label: 'Reviewer', icon: CheckSquare, color: '#a855f7', path: '/reviewer/dashboard' },
   { id: 'CONTROLLER', label: 'Exam Controller', icon: Clock, color: '#f59e0b', path: '/controller/dashboard' },
-  { id: 'CANDIDATE', label: 'Candidate', icon: UserCheck, color: '#10b981', path: '/candidate/dashboard' }
+  { id: 'CANDIDATE', label: 'Candidate', icon: UserCheck, color: '#10b981', path: '/candidate/dashboard' },
+  { id: 'ADMIN', label: 'System Admin', icon: Shield, color: '#f43f5e', path: '/admin/dashboard' }
 ];
 
 const RoleSwitcherBar = () => {
