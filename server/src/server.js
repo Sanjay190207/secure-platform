@@ -78,12 +78,15 @@ app.use('/api/security', auditRoutes);
 
 // System Health Status Endpoint
 app.get('/api/health', (req, res) => {
+  const { getIsPg } = require('./db');
   res.json({
     status: 'ONLINE',
     system: 'Secure Question Paper Management System API',
     timestamp: new Date().toISOString(),
     security_mode: 'ENFORCED',
-    platform: process.env.VERCEL ? 'VERCEL_SERVERLESS' : 'NODE_STANDALONE'
+    platform: process.env.VERCEL ? 'VERCEL_SERVERLESS' : 'NODE_STANDALONE',
+    database_connected: getIsPg() ? 'POSTGRESQL_SUPABASE' : 'SQLITE_FALLBACK',
+    has_database_url: !!process.env.DATABASE_URL
   });
 });
 

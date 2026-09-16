@@ -10,19 +10,26 @@ let isPg = false;
 
 // Initialize Database connection
 async function initDb() {
+  if (pgPool && isPg) {
+    return;
+  }
+
   // 1. Try PostgreSQL connection if configured (via DATABASE_URL or DB parameters)
   try {
     const connectionString = process.env.DATABASE_URL;
     const poolConfig = connectionString ? {
       connectionString,
-      ssl: process.env.DB_SSL === 'false' ? false : { rejectUnauthorized: false }
+      ssl: { rejectUnauthorized: false },
+      connectionTimeoutMillis: 10000,
+      idleTimeoutMillis: 30000,
+      max: 10
     } : {
       host: process.env.DB_HOST || 'localhost',
       port: parseInt(process.env.DB_PORT || '5432'),
       database: process.env.DB_NAME || 'secure_exam_db',
       user: process.env.DB_USER || 'postgres',
       password: process.env.DB_PASSWORD || 'postgres',
-      connectionTimeoutMillis: 3000,
+      connectionTimeoutMillis: 10000,
     };
 
     const pool = new Pool(poolConfig);
