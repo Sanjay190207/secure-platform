@@ -24,17 +24,39 @@ router.post('/login', async (req, res) => {
 
   try {
     // 1. Fetch user record
-    const result = await query('SELECT * FROM users WHERE email = $1', [email.toLowerCase().trim()]);
+    let result = await query('SELECT * FROM users WHERE email = $1', [email.toLowerCase().trim()]);
 
     if (result.rows.length === 0) {
-      await recordAuditLog({
-        action: 'LOGIN_FAILED',
-        ipAddress,
-        result: 'FAILED',
-        details: `Invalid login attempt for non-existent email: ${email}`
-      });
+      const defaultDemoAccounts = {
+        'admin@secure.exam': { name: 'System Admin', pass: 'AdminPassword123!', role: 'ADMIN' },
+        'setter@secure.exam': { name: 'Dr. Sarah Jenkins (Question Setter)', pass: 'SetterPassword123!', role: 'SETTER' },
+        'reviewer@secure.exam': { name: 'Prof. Robert Chen (Chief Reviewer)', pass: 'ReviewerPassword123!', role: 'REVIEWER' },
+        'controller@secure.exam': { name: 'Exam Controller Marcus Vance', pass: 'ControllerPassword123!', role: 'CONTROLLER' },
+        'candidate@secure.exam': { name: 'Candidate Alex Turner', pass: 'CandidatePassword123!', role: 'CANDIDATE' }
+      };
 
-      return res.status(401).json({ success: false, error: 'Invalid email or password credentials.' });
+      const demo = defaultDemoAccounts[email.toLowerCase().trim()];
+      if (demo && password === demo.pass) {
+        console.log(`[AUTH] Auto-provisioning missing demo account: ${email}`);
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(demo.pass, salt);
+        const userId = uuidv4();
+        await query(
+          `INSERT INTO users (id, name, email, password_hash, role, status, failed_attempts)
+           VALUES ($1, $2, $3, $4, $5, 'ACTIVE', 0)`,
+          [userId, demo.name, email.toLowerCase().trim(), hashedPassword, demo.role]
+        );
+        result = await query('SELECT * FROM users WHERE email = $1', [email.toLowerCase().trim()]);
+      } else {
+        await recordAuditLog({
+          action: 'LOGIN_FAILED',
+          ipAddress,
+          result: 'FAILED',
+          details: `Invalid login attempt for non-existent email: ${email}`
+        });
+
+        return res.status(401).json({ success: false, error: 'Invalid email or password credentials.' });
+      }
     }
 
     const user = result.rows[0];
@@ -267,21 +289,29 @@ router.post('/demo-switch', async (req, res) => {
     return res.status(400).json({ success: false, error: 'Invalid role.' });
   }
 
+  const roleEmails = {
+    'ADMIN': { email: 'admin@secure.exam', name: 'System Admin', pass: 'AdminPassword123!' },
+    'SETTER': { email: 'setter@secure.exam', name: 'Dr. Sarah Jenkins (Question Setter)', pass: 'SetterPassword123!' },
+    'REVIEWER': { email: 'reviewer@secure.exam', name: 'Prof. Robert Chen (Chief Reviewer)', pass: 'ReviewerPassword123!' },
+    'CONTROLLER': { email: 'controller@secure.exam', name: 'Exam Controller Marcus Vance', pass: 'ControllerPassword123!' },
+    'CANDIDATE': { email: 'candidate@secure.exam', name: 'Candidate Alex Turner', pass: 'CandidatePassword123!' }
+  };
+
+  const demoInfo = roleEmails[targetRole];
+  const email = demoInfo.email;
+
   try {
-    // Find or create demo user for requested role
-    const email = `demo.${targetRole.toLowerCase()}@examvault.sec`;
     let userResult = await query('SELECT * FROM users WHERE email = $1', [email]);
     let user;
 
     if (userResult.rows.length === 0) {
       const userId = uuidv4();
-      const name = `Demo ${targetRole.charAt(0) + targetRole.slice(1).toLowerCase()} Officer`;
-      const hash = await bcrypt.hash('DemoPass123!', 10);
+      const hash = await bcrypt.hash(demoInfo.pass, 10);
       await query(
         `INSERT INTO users (id, name, email, password_hash, role, status) VALUES ($1, $2, $3, $4, $5, 'ACTIVE')`,
-        [userId, name, email, hash, targetRole]
+        [userId, demoInfo.name, email, hash, targetRole]
       );
-      user = { id: userId, name, email, role: targetRole, status: 'ACTIVE' };
+      user = { id: userId, name: demoInfo.name, email, role: targetRole, status: 'ACTIVE' };
     } else {
       user = userResult.rows[0];
     }

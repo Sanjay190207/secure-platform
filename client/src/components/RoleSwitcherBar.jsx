@@ -24,7 +24,7 @@ const RoleSwitcherBar = () => {
     }
     const res = await switchDemoRole(roleId);
     if (res?.success) {
-      navigate(targetPath);
+      navigate(targetPath, { replace: true });
     }
   };
 
