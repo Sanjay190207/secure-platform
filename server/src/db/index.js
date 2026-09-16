@@ -24,9 +24,9 @@ async function initDb() {
       const pool = new Pool({
         connectionString,
         ssl: { rejectUnauthorized: false },
-        connectionTimeoutMillis: 10000,
-        idleTimeoutMillis: 30000,
-        max: 10
+        connectionTimeoutMillis: 2500,
+        idleTimeoutMillis: 10000,
+        max: 5
       });
 
       const client = await pool.connect();
