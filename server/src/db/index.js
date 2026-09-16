@@ -140,9 +140,15 @@ const memoryDb = {
   vault_access_attempts: []
 };
 
+let pgFailed = false;
+
 // Initialize Database connection
 async function initDb() {
   if (pgPool && isPg) {
+    return;
+  }
+
+  if (pgFailed) {
     return;
   }
 
@@ -155,7 +161,7 @@ async function initDb() {
       const pool = new Pool({
         connectionString,
         ssl: { rejectUnauthorized: false },
-        connectionTimeoutMillis: 2500,
+        connectionTimeoutMillis: 1200,
         idleTimeoutMillis: 10000,
         max: 5
       });
@@ -252,6 +258,7 @@ async function initDb() {
       return;
     } catch (err) {
       pgErrorMsg = err.message || String(err);
+      pgFailed = true;
       console.error('[CRITICAL DB ERROR] PostgreSQL connection failed:', err.message);
     }
   }
