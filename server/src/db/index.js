@@ -201,13 +201,26 @@ async function initDb() {
   `;
 
   return new Promise((resolve, reject) => {
-    sqliteDb.exec(schemaSql, (err) => {
+    sqliteDb.exec(schemaSql, async (err) => {
       if (err) {
         console.error('[DB] SQLite Schema Error:', err);
         reject(err);
       } else {
         console.log('[DB] Local SQLite Security Database initialized.');
-        resolve();
+        // Auto-seed SQLite fallback if vault_question_papers is empty
+        try {
+          sqliteDb.get('SELECT COUNT(*) as count FROM vault_question_papers', async (countErr, row) => {
+            if (!countErr && (row?.count === 0 || !row)) {
+              console.log('[DB] SQLite vault_question_papers empty. Seeding fallback data...');
+              const seed = require('./seed');
+              await seed();
+            }
+            resolve();
+          });
+        } catch (seedErr) {
+          console.error('[DB] SQLite auto-seeding failed:', seedErr.message);
+          resolve();
+        }
       }
     });
   });
