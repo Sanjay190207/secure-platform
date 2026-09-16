@@ -13,9 +13,9 @@ const router = express.Router();
 router.get('/', authenticateUser, async (req, res) => {
   try {
     const sql = `SELECT e.*, p.title as paper_title, p.file_hash, p.status as paper_status, u.name as creator_name 
-                 FROM exams e 
-                 LEFT JOIN question_papers p ON e.question_paper_id = p.id 
-                 LEFT JOIN users u ON e.created_by = u.id 
+                 FROM vault_exams e 
+                 LEFT JOIN vault_question_papers p ON e.question_paper_id = p.id 
+                 LEFT JOIN vault_users u ON e.created_by = u.id 
                  ORDER BY e.start_time ASC`;
 
     const result = await query(sql);
@@ -62,7 +62,7 @@ router.post('/', authenticateUser, checkRole('CONTROLLER', 'ADMIN'), async (req,
 
   try {
     // 1. Verify Question Paper Exists & Status is APPROVED
-    const paperRes = await query('SELECT * FROM question_papers WHERE id = $1', [question_paper_id]);
+    const paperRes = await query('SELECT * FROM vault_question_papers WHERE id = $1', [question_paper_id]);
     if (paperRes.rows.length === 0) {
       return res.status(404).json({ success: false, error: 'Selected question paper not found.' });
     }
@@ -82,13 +82,13 @@ router.post('/', authenticateUser, checkRole('CONTROLLER', 'ADMIN'), async (req,
 
     // 2. Insert Exam Record
     await query(
-      `INSERT INTO exams (id, exam_name, question_paper_id, exam_date, start_time, end_time, status, created_by)
+      `INSERT INTO vault_exams (id, exam_name, question_paper_id, exam_date, start_time, end_time, status, created_by)
        VALUES ($1, $2, $3, $4, $5, $6, 'SCHEDULED', $7)`,
       [examId, exam_name, question_paper_id, exam_date, startIso, endIso, req.user.id]
     );
 
     // 3. Update Paper Status to SCHEDULED
-    await query("UPDATE question_papers SET status = 'SCHEDULED', updated_at = CURRENT_TIMESTAMP WHERE id = $1", [question_paper_id]);
+    await query("UPDATE vault_question_papers SET status = 'SCHEDULED', updated_at = CURRENT_TIMESTAMP WHERE id = $1", [question_paper_id]);
 
     // 4. Record Audit Log
     await recordAuditLog({
@@ -132,8 +132,8 @@ router.get('/:id/question-paper', authenticateUser, async (req, res) => {
   try {
     const examRes = await query(
       `SELECT e.*, p.title as paper_title, p.storage_object, p.file_hash, p.status as paper_status 
-       FROM exams e 
-       JOIN question_papers p ON e.question_paper_id = p.id 
+       FROM vault_exams e 
+       JOIN vault_question_papers p ON e.question_paper_id = p.id 
        WHERE e.id = $1`,
       [id]
     );
@@ -213,7 +213,7 @@ router.get('/:id/question-paper', authenticateUser, async (req, res) => {
     try {
       decryptedPdfBuffer = decryptPaperBuffer(encryptedBuffer);
     } catch (e) {
-      await query("UPDATE question_papers SET status = 'COMPROMISED' WHERE id = $1", [exam.question_paper_id]);
+      await query("UPDATE vault_question_papers SET status = 'COMPROMISED' WHERE id = $1", [exam.question_paper_id]);
       await recordAuditLog({
         userId: req.user.id,
         role: req.user.role,
@@ -232,7 +232,7 @@ router.get('/:id/question-paper', authenticateUser, async (req, res) => {
     // 5. SHA-256 Pre-Release Integrity Verification
     const verification = verifyPaperIntegrity(decryptedPdfBuffer, exam.file_hash);
     if (!verification.verified) {
-      await query("UPDATE question_papers SET status = 'COMPROMISED' WHERE id = $1", [exam.question_paper_id]);
+      await query("UPDATE vault_question_papers SET status = 'COMPROMISED' WHERE id = $1", [exam.question_paper_id]);
       await recordAuditLog({
         userId: req.user.id,
         role: req.user.role,
@@ -249,7 +249,7 @@ router.get('/:id/question-paper', authenticateUser, async (req, res) => {
     }
 
     // 6. Update Paper Status to RELEASED if not already
-    await query("UPDATE question_papers SET status = 'RELEASED', updated_at = CURRENT_TIMESTAMP WHERE id = $1", [exam.question_paper_id]);
+    await query("UPDATE vault_question_papers SET status = 'RELEASED', updated_at = CURRENT_TIMESTAMP WHERE id = $1", [exam.question_paper_id]);
 
     // 7. Audit Log
     await recordAuditLog({

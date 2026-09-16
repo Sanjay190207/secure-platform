@@ -43,7 +43,7 @@ router.post('/upload', authenticateUser, checkRole('SETTER', 'ADMIN'), uploadPap
 
     // 5. Store Paper Metadata & Original Hash in Database
     await query(
-      `INSERT INTO question_papers (id, title, exam_name, storage_object, file_hash, status, uploaded_by)
+      `INSERT INTO vault_question_papers (id, title, exam_name, storage_object, file_hash, status, uploaded_by)
        VALUES ($1, $2, $3, $4, $5, 'SUBMITTED', $6)`,
       [paperId, title, exam_name, storageObjectName, fileHash, req.user.id]
     );
@@ -90,21 +90,21 @@ router.get('/', authenticateUser, async (req, res) => {
     let params = [];
 
     if (role === 'SETTER') {
-      sql = `SELECT p.*, u.name as setter_name FROM question_papers p 
-             LEFT JOIN users u ON p.uploaded_by = u.id 
+      sql = `SELECT p.*, u.name as setter_name FROM vault_question_papers p 
+             LEFT JOIN vault_users u ON p.uploaded_by = u.id 
              ORDER BY p.created_at DESC`;
       params = [];
     } else if (role === 'REVIEWER') {
-      sql = `SELECT p.*, u.name as setter_name FROM question_papers p 
-             LEFT JOIN users u ON p.uploaded_by = u.id 
+      sql = `SELECT p.*, u.name as setter_name FROM vault_question_papers p 
+             LEFT JOIN vault_users u ON p.uploaded_by = u.id 
              WHERE p.status IN ('SUBMITTED', 'UNDER_REVIEW', 'APPROVED', 'REJECTED', 'COMPROMISED') ORDER BY p.created_at DESC`;
     } else if (role === 'CONTROLLER') {
-      sql = `SELECT p.*, u.name as setter_name FROM question_papers p 
-             LEFT JOIN users u ON p.uploaded_by = u.id 
+      sql = `SELECT p.*, u.name as setter_name FROM vault_question_papers p 
+             LEFT JOIN vault_users u ON p.uploaded_by = u.id 
              WHERE p.status IN ('APPROVED', 'SCHEDULED', 'RELEASED', 'CLOSED', 'COMPROMISED') ORDER BY p.created_at DESC`;
     } else if (role === 'ADMIN') {
-      sql = `SELECT p.*, u.name as setter_name FROM question_papers p 
-             LEFT JOIN users u ON p.uploaded_by = u.id 
+      sql = `SELECT p.*, u.name as setter_name FROM vault_question_papers p 
+             LEFT JOIN vault_users u ON p.uploaded_by = u.id 
              ORDER BY p.created_at DESC`;
     } else {
       return res.status(403).json({ success: false, error: 'Candidates cannot browse question paper drafts.' });
@@ -126,7 +126,7 @@ router.get('/:id/verify', authenticateUser, async (req, res) => {
   const ipAddress = req.ip || req.connection.remoteAddress;
 
   try {
-    const result = await query('SELECT * FROM question_papers WHERE id = $1', [id]);
+    const result = await query('SELECT * FROM vault_question_papers WHERE id = $1', [id]);
     if (result.rows.length === 0) {
       return res.status(404).json({ success: false, error: 'Question paper not found.' });
     }
@@ -148,7 +148,7 @@ router.get('/:id/verify', authenticateUser, async (req, res) => {
     try {
       decryptedPdfBuffer = decryptPaperBuffer(encryptedBuffer);
     } catch (decryptErr) {
-      await query("UPDATE question_papers SET status = 'COMPROMISED', updated_at = CURRENT_TIMESTAMP WHERE id = $1", [id]);
+      await query("UPDATE vault_question_papers SET status = 'COMPROMISED', updated_at = CURRENT_TIMESTAMP WHERE id = $1", [id]);
 
       await recordAuditLog({
         userId: req.user.id,
@@ -172,7 +172,7 @@ router.get('/:id/verify', authenticateUser, async (req, res) => {
     const verification = verifyPaperIntegrity(decryptedPdfBuffer, paper.file_hash);
 
     if (!verification.verified) {
-      await query("UPDATE question_papers SET status = 'COMPROMISED', updated_at = CURRENT_TIMESTAMP WHERE id = $1", [id]);
+      await query("UPDATE vault_question_papers SET status = 'COMPROMISED', updated_at = CURRENT_TIMESTAMP WHERE id = $1", [id]);
 
       await recordAuditLog({
         userId: req.user.id,
@@ -226,7 +226,7 @@ router.post('/:id/submit', authenticateUser, checkRole('SETTER', 'ADMIN'), async
   const ipAddress = req.ip || req.connection.remoteAddress;
 
   try {
-    const result = await query('SELECT * FROM question_papers WHERE id = $1', [id]);
+    const result = await query('SELECT * FROM vault_question_papers WHERE id = $1', [id]);
     if (result.rows.length === 0) {
       return res.status(404).json({ success: false, error: 'Question paper not found.' });
     }
@@ -236,7 +236,7 @@ router.post('/:id/submit', authenticateUser, checkRole('SETTER', 'ADMIN'), async
       return res.status(403).json({ success: false, error: 'You can only submit papers you uploaded.' });
     }
 
-    await query("UPDATE question_papers SET status = 'SUBMITTED', updated_at = CURRENT_TIMESTAMP WHERE id = $1", [id]);
+    await query("UPDATE vault_question_papers SET status = 'SUBMITTED', updated_at = CURRENT_TIMESTAMP WHERE id = $1", [id]);
 
     await recordAuditLog({
       userId: req.user.id,
@@ -265,7 +265,7 @@ router.post('/:id/approve', authenticateUser, checkRole('REVIEWER', 'ADMIN'), as
   const ipAddress = req.ip || req.connection.remoteAddress;
 
   try {
-    const result = await query('SELECT * FROM question_papers WHERE id = $1', [id]);
+    const result = await query('SELECT * FROM vault_question_papers WHERE id = $1', [id]);
     if (result.rows.length === 0) {
       return res.status(404).json({ success: false, error: 'Question paper not found.' });
     }
@@ -285,14 +285,14 @@ router.post('/:id/approve', authenticateUser, checkRole('REVIEWER', 'ADMIN'), as
       const decryptedBuffer = decryptPaperBuffer(encryptedBuffer);
       const verification = verifyPaperIntegrity(decryptedBuffer, paper.file_hash);
       if (!verification.verified) {
-        await query("UPDATE question_papers SET status = 'COMPROMISED' WHERE id = $1", [id]);
+        await query("UPDATE vault_question_papers SET status = 'COMPROMISED' WHERE id = $1", [id]);
         return res.status(400).json({
           success: false,
           error: 'CRITICAL ALERT: Approval blocked! SHA-256 Hash mismatch detected during pre-approval check.'
         });
       }
     } catch (e) {
-      await query("UPDATE question_papers SET status = 'COMPROMISED' WHERE id = $1", [id]);
+      await query("UPDATE vault_question_papers SET status = 'COMPROMISED' WHERE id = $1", [id]);
       return res.status(400).json({
         success: false,
         error: 'CRITICAL ALERT: Approval blocked! Decryption failed due to file tampering.'
@@ -300,12 +300,12 @@ router.post('/:id/approve', authenticateUser, checkRole('REVIEWER', 'ADMIN'), as
     }
 
     // 2. State Transition: Set Status to APPROVED
-    await query("UPDATE question_papers SET status = 'APPROVED', updated_at = CURRENT_TIMESTAMP WHERE id = $1", [id]);
+    await query("UPDATE vault_question_papers SET status = 'APPROVED', updated_at = CURRENT_TIMESTAMP WHERE id = $1", [id]);
 
     // 3. Record Approval Decision Record
     const approvalId = uuidv4();
     await query(
-      `INSERT INTO approvals (id, question_paper_id, reviewer_id, decision, comments)
+      `INSERT INTO vault_approvals (id, question_paper_id, reviewer_id, decision, comments)
        VALUES ($1, $2, $3, 'APPROVED', $4)`,
       [approvalId, id, req.user.id, comments || 'Verified and approved by Chief Reviewer. Syllabus and security standards met.']
     );
@@ -343,7 +343,7 @@ router.post('/:id/reject', authenticateUser, checkRole('REVIEWER', 'ADMIN'), asy
   const ipAddress = req.ip || req.connection.remoteAddress;
 
   try {
-    const result = await query('SELECT * FROM question_papers WHERE id = $1', [id]);
+    const result = await query('SELECT * FROM vault_question_papers WHERE id = $1', [id]);
     if (result.rows.length === 0) {
       return res.status(404).json({ success: false, error: 'Question paper not found.' });
     }
@@ -351,12 +351,12 @@ router.post('/:id/reject', authenticateUser, checkRole('REVIEWER', 'ADMIN'), asy
     const paper = result.rows[0];
 
     // State Transition: Set Status to REJECTED
-    await query("UPDATE question_papers SET status = 'REJECTED', updated_at = CURRENT_TIMESTAMP WHERE id = $1", [id]);
+    await query("UPDATE vault_question_papers SET status = 'REJECTED', updated_at = CURRENT_TIMESTAMP WHERE id = $1", [id]);
 
     // Record Rejection Decision
     const approvalId = uuidv4();
     await query(
-      `INSERT INTO approvals (id, question_paper_id, reviewer_id, decision, comments)
+      `INSERT INTO vault_approvals (id, question_paper_id, reviewer_id, decision, comments)
        VALUES ($1, $2, $3, 'REJECTED', $4)`,
       [approvalId, id, req.user.id, comments || 'Rejected during quality review. Re-upload required.']
     );
@@ -392,7 +392,7 @@ router.post('/:id/simulate-tamper', authenticateUser, checkRole('ADMIN', 'SETTER
   const ipAddress = req.ip || req.connection.remoteAddress;
 
   try {
-    const result = await query('SELECT * FROM question_papers WHERE id = $1', [id]);
+    const result = await query('SELECT * FROM vault_question_papers WHERE id = $1', [id]);
     if (result.rows.length === 0) {
       return res.status(404).json({ success: false, error: 'Paper not found.' });
     }
@@ -433,7 +433,7 @@ router.get('/:id/ai-analysis', authenticateUser, async (req, res) => {
   const { id } = req.params;
 
   try {
-    const result = await query('SELECT * FROM question_papers WHERE id = $1', [id]);
+    const result = await query('SELECT * FROM vault_question_papers WHERE id = $1', [id]);
     if (result.rows.length === 0) {
       return res.status(404).json({ success: false, error: 'Question paper not found.' });
     }
@@ -491,7 +491,7 @@ router.post('/trace-leak', authenticateUser, checkRole('ADMIN', 'REVIEWER', 'CON
   try {
     // Search latest access or approval logs for realistic forensic matching
     const logsRes = await query(
-      "SELECT al.*, u.name, u.email FROM audit_logs al LEFT JOIN users u ON al.user_id = u.id WHERE al.action IN ('PAPER_APPROVED', 'PAPER_ACCESSED', 'PAPER_RELEASED', 'PAPER_UPLOADED') ORDER BY al.timestamp DESC LIMIT 1"
+      "SELECT al.*, u.name, u.email FROM vault_audit_logs al LEFT JOIN vault_users u ON al.user_id = u.id WHERE al.action IN ('PAPER_APPROVED', 'PAPER_ACCESSED', 'PAPER_RELEASED', 'PAPER_UPLOADED') ORDER BY al.timestamp DESC LIMIT 1"
     );
 
     const matchLog = logsRes.rows[0] || {

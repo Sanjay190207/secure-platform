@@ -13,7 +13,7 @@ router.use(authenticateUser, checkRole('ADMIN'));
 router.get('/users', async (req, res) => {
   try {
     const result = await query(
-      'SELECT id, name, email, role, status, failed_attempts, locked_until, created_at FROM users ORDER BY created_at DESC'
+      'SELECT id, name, email, role, status, failed_attempts, locked_until, created_at FROM vault_users ORDER BY created_at DESC'
     );
     res.json({ success: true, count: result.rows.length, users: result.rows });
   } catch (err) {
@@ -35,12 +35,12 @@ router.put('/users/:id/role', async (req, res) => {
   }
 
   try {
-    const prev = await query('SELECT role, email FROM users WHERE id = $1', [id]);
+    const prev = await query('SELECT role, email FROM vault_users WHERE id = $1', [id]);
     if (prev.rows.length === 0) {
       return res.status(404).json({ success: false, error: 'User not found.' });
     }
 
-    await query('UPDATE users SET role = $1 WHERE id = $2', [role, id]);
+    await query('UPDATE vault_users SET role = $1 WHERE id = $2', [role, id]);
 
     await recordAuditLog({
       userId: req.user.id,
@@ -78,7 +78,7 @@ router.put('/users/:id/status', async (req, res) => {
       extraFields = ', failed_attempts = 0, locked_until = NULL';
     }
 
-    await query(`UPDATE users SET status = $1 ${extraFields} WHERE id = $2`, params);
+    await query(`UPDATE vault_users SET status = $1 ${extraFields} WHERE id = $2`, params);
 
     await recordAuditLog({
       userId: req.user.id,
@@ -101,12 +101,12 @@ router.put('/users/:id/status', async (req, res) => {
  */
 router.get('/stats', async (req, res) => {
   try {
-    const usersCount = await query('SELECT COUNT(*) as total FROM users');
-    const papersCount = await query('SELECT COUNT(*) as total FROM question_papers');
-    const pendingApprovals = await query("SELECT COUNT(*) as total FROM question_papers WHERE status IN ('SUBMITTED', 'UNDER_REVIEW')");
-    const scheduledExams = await query("SELECT COUNT(*) as total FROM exams WHERE status = 'SCHEDULED'");
-    const failedLogins = await query("SELECT COUNT(*) as total FROM audit_logs WHERE action IN ('LOGIN_FAILED', 'LOGIN_LOCKED_ACCOUNT_ATTEMPT')");
-    const integrityFailures = await query("SELECT COUNT(*) as total FROM audit_logs WHERE result = 'TAMPERING_DETECTED'");
+    const usersCount = await query('SELECT COUNT(*) as total FROM vault_users');
+    const papersCount = await query('SELECT COUNT(*) as total FROM vault_question_papers');
+    const pendingApprovals = await query("SELECT COUNT(*) as total FROM vault_question_papers WHERE status IN ('SUBMITTED', 'UNDER_REVIEW')");
+    const scheduledExams = await query("SELECT COUNT(*) as total FROM vault_exams WHERE status = 'SCHEDULED'");
+    const failedLogins = await query("SELECT COUNT(*) as total FROM vault_audit_logs WHERE action IN ('LOGIN_FAILED', 'LOGIN_LOCKED_ACCOUNT_ATTEMPT')");
+    const integrityFailures = await query("SELECT COUNT(*) as total FROM vault_audit_logs WHERE result = 'TAMPERING_DETECTED'");
 
     res.json({
       success: true,

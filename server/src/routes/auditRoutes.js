@@ -17,8 +17,8 @@ router.get('/', async (req, res) => {
 
   try {
     let sql = `SELECT a.*, u.name as user_name, u.email as user_email 
-               FROM audit_logs a 
-               LEFT JOIN users u ON a.user_id = u.id 
+               FROM vault_audit_logs a 
+               LEFT JOIN vault_users u ON a.user_id = u.id 
                WHERE 1=1`;
     const params = [];
 
@@ -60,8 +60,8 @@ router.get('/events', async (req, res) => {
   try {
     const criticalEvents = await query(
       `SELECT a.*, u.name as user_name, u.email as user_email 
-       FROM audit_logs a 
-       LEFT JOIN users u ON a.user_id = u.id 
+       FROM vault_audit_logs a 
+       LEFT JOIN vault_users u ON a.user_id = u.id 
        WHERE a.result IN ('DENIED', 'TAMPERING_DETECTED', 'FAILED') OR a.action IN ('ACCOUNT_LOCKED', 'INTEGRITY_FAILURE') 
        ORDER BY a.timestamp DESC LIMIT 50`
     );

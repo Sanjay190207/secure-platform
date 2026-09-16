@@ -44,14 +44,14 @@ async function seed() {
   const userIds = {};
 
   for (const user of usersToSeed) {
-    const existing = await query('SELECT * FROM users WHERE email = $1', [user.email]);
+    const existing = await query('SELECT * FROM vault_users WHERE email = $1', [user.email]);
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(user.password, salt);
 
     if (existing.rows.length === 0) {
       const userId = uuidv4();
       await query(
-        `INSERT INTO users (id, name, email, password_hash, role, status, failed_attempts) 
+        `INSERT INTO vault_users (id, name, email, password_hash, role, status, failed_attempts) 
          VALUES ($1, $2, $3, $4, $5, 'ACTIVE', 0)`,
         [userId, user.name, user.email, hashedPassword, user.role]
       );
@@ -60,7 +60,7 @@ async function seed() {
     } else {
       userIds[user.role] = existing.rows[0].id;
       await query(
-        "UPDATE users SET role = $1, status = 'ACTIVE', failed_attempts = 0, locked_until = NULL, password_hash = $2 WHERE email = $3",
+        "UPDATE vault_users SET role = $1, status = 'ACTIVE', failed_attempts = 0, locked_until = NULL, password_hash = $2 WHERE email = $3",
         [user.role, hashedPassword, user.email]
       );
       console.log(`[SEED] Reset default ${user.role} account: ${user.email}`);
@@ -68,7 +68,7 @@ async function seed() {
   }
 
   // Seed Sample Question Papers if table is empty
-  const paperCountRes = await query('SELECT COUNT(*) FROM question_papers');
+  const paperCountRes = await query('SELECT COUNT(*) FROM vault_question_papers');
   if (parseInt(paperCountRes.rows[0].count) === 0) {
     console.log('[SEED] Seeding sample question papers...');
 
@@ -101,7 +101,7 @@ async function seed() {
       await savePaperObject(storageObjName, encryptedPackedBuffer);
 
       await query(
-        `INSERT INTO question_papers (id, title, exam_name, storage_object, file_hash, status, uploaded_by)
+        `INSERT INTO vault_question_papers (id, title, exam_name, storage_object, file_hash, status, uploaded_by)
          VALUES ($1, $2, $3, $4, $5, $6, $7)`,
         [paperId, paper.title, paper.examName, storageObjName, fileHash, paper.status, userIds['SETTER']]
       );
@@ -112,7 +112,7 @@ async function seed() {
         const startTime = new Date(Date.now() - 3600000).toISOString();
         const endTime = new Date(Date.now() + 10800000).toISOString();
         await query(
-          `INSERT INTO exams (id, exam_name, question_paper_id, exam_date, start_time, end_time, status, created_by)
+          `INSERT INTO vault_exams (id, exam_name, question_paper_id, exam_date, start_time, end_time, status, created_by)
            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
           [examId, paper.examName, paperId, '2026-09-16', startTime, endTime, paper.status === 'RELEASED' ? 'RELEASED' : 'SCHEDULED', userIds['CONTROLLER']]
         );
@@ -122,7 +122,7 @@ async function seed() {
 
   // Create initial audit log entry
   await query(
-    `INSERT INTO audit_logs (id, user_id, role, action, ip_address, result, details) 
+    `INSERT INTO vault_audit_logs (id, user_id, role, action, ip_address, result, details) 
      VALUES ($1, $2, $3, $4, $5, $6, $7)`,
     [uuidv4(), 'SYSTEM', 'SYSTEM', 'SYSTEM_INITIALIZED', '127.0.0.1', 'SUCCESS', 'Database seeded with default accounts, question papers, and exam schedules']
   );

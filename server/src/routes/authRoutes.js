@@ -24,7 +24,7 @@ router.post('/login', async (req, res) => {
 
   try {
     // 1. Fetch user record
-    let result = await query('SELECT * FROM users WHERE email = $1', [email.toLowerCase().trim()]);
+    let result = await query('SELECT * FROM vault_users WHERE email = $1', [email.toLowerCase().trim()]);
 
     if (result.rows.length === 0) {
       const defaultDemoAccounts = {
@@ -42,11 +42,11 @@ router.post('/login', async (req, res) => {
         const hashedPassword = await bcrypt.hash(demo.pass, salt);
         const userId = uuidv4();
         await query(
-          `INSERT INTO users (id, name, email, password_hash, role, status, failed_attempts)
+          `INSERT INTO vault_users (id, name, email, password_hash, role, status, failed_attempts)
            VALUES ($1, $2, $3, $4, $5, 'ACTIVE', 0)`,
           [userId, demo.name, email.toLowerCase().trim(), hashedPassword, demo.role]
         );
-        result = await query('SELECT * FROM users WHERE email = $1', [email.toLowerCase().trim()]);
+        result = await query('SELECT * FROM vault_users WHERE email = $1', [email.toLowerCase().trim()]);
       } else {
         await recordAuditLog({
           action: 'LOGIN_FAILED',
@@ -93,7 +93,7 @@ router.post('/login', async (req, res) => {
         });
       } else {
         // Lock window expired, reactivate account
-        await query("UPDATE users SET status = 'ACTIVE', failed_attempts = 0, locked_until = NULL WHERE id = $1", [user.id]);
+        await query("UPDATE vault_users SET status = 'ACTIVE', failed_attempts = 0, locked_until = NULL WHERE id = $1", [user.id]);
         user.status = 'ACTIVE';
         user.failed_attempts = 0;
       }
@@ -108,7 +108,7 @@ router.post('/login', async (req, res) => {
       if (newFailedCount >= MAX_FAILED_ATTEMPTS) {
         const lockUntil = new Date(Date.now() + LOCK_TIME_MINUTES * 60 * 1000);
         await query(
-          "UPDATE users SET status = 'LOCKED', failed_attempts = $1, locked_until = $2 WHERE id = $3",
+          "UPDATE vault_users SET status = 'LOCKED', failed_attempts = $1, locked_until = $2 WHERE id = $3",
           [newFailedCount, lockUntil.toISOString(), user.id]
         );
 
@@ -126,7 +126,7 @@ router.post('/login', async (req, res) => {
           error: `Account locked due to ${MAX_FAILED_ATTEMPTS} consecutive failed attempts. Please try again after 15 minutes.`
         });
       } else {
-        await query("UPDATE users SET failed_attempts = $1 WHERE id = $2", [newFailedCount, user.id]);
+        await query("UPDATE vault_users SET failed_attempts = $1 WHERE id = $2", [newFailedCount, user.id]);
 
         await recordAuditLog({
           userId: user.id,
@@ -145,7 +145,7 @@ router.post('/login', async (req, res) => {
     }
 
     // 5. Login Successful: Reset failed attempts & generate JWT
-    await query("UPDATE users SET failed_attempts = 0, locked_until = NULL, status = 'ACTIVE' WHERE id = $1", [user.id]);
+    await query("UPDATE vault_users SET failed_attempts = 0, locked_until = NULL, status = 'ACTIVE' WHERE id = $1", [user.id]);
 
     const token = jwt.sign(
       {
@@ -208,7 +208,7 @@ router.post('/register', async (req, res) => {
 
   try {
     // 1. Check if email already exists
-    const existing = await query('SELECT id FROM users WHERE email = $1', [normalizedEmail]);
+    const existing = await query('SELECT id FROM vault_users WHERE email = $1', [normalizedEmail]);
     if (existing.rows.length > 0) {
       return res.status(400).json({ success: false, error: 'Email address is already registered. Please sign in.' });
     }
@@ -220,7 +220,7 @@ router.post('/register', async (req, res) => {
     // 3. Insert new user record
     const userId = uuidv4();
     await query(
-      `INSERT INTO users (id, name, email, password_hash, role, status, failed_attempts)
+      `INSERT INTO vault_users (id, name, email, password_hash, role, status, failed_attempts)
        VALUES ($1, $2, $3, $4, $5, 'ACTIVE', 0)`,
       [userId, trimmedName, normalizedEmail, hashedPassword, role]
     );
@@ -301,14 +301,14 @@ router.post('/demo-switch', async (req, res) => {
   const email = demoInfo.email;
 
   try {
-    let userResult = await query('SELECT * FROM users WHERE email = $1', [email]);
+    let userResult = await query('SELECT * FROM vault_users WHERE email = $1', [email]);
     let user;
 
     if (userResult.rows.length === 0) {
       const userId = uuidv4();
       const hash = await bcrypt.hash(demoInfo.pass, 10);
       await query(
-        `INSERT INTO users (id, name, email, password_hash, role, status) VALUES ($1, $2, $3, $4, $5, 'ACTIVE')`,
+        `INSERT INTO vault_users (id, name, email, password_hash, role, status) VALUES ($1, $2, $3, $4, $5, 'ACTIVE')`,
         [userId, demoInfo.name, email, hash, targetRole]
       );
       user = { id: userId, name: demoInfo.name, email, role: targetRole, status: 'ACTIVE' };

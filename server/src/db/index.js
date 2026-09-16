@@ -39,7 +39,7 @@ async function initDb() {
 
     // Auto-create PostgreSQL database tables if they do not exist
     await pool.query(`
-      CREATE TABLE IF NOT EXISTS users (
+      CREATE TABLE IF NOT EXISTS vault_users (
         id TEXT PRIMARY KEY,
         name TEXT NOT NULL,
         email TEXT UNIQUE NOT NULL,
@@ -51,7 +51,7 @@ async function initDb() {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
 
-      CREATE TABLE IF NOT EXISTS question_papers (
+      CREATE TABLE IF NOT EXISTS vault_question_papers (
         id TEXT PRIMARY KEY,
         title TEXT NOT NULL,
         exam_name TEXT NOT NULL,
@@ -63,7 +63,7 @@ async function initDb() {
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
 
-      CREATE TABLE IF NOT EXISTS exams (
+      CREATE TABLE IF NOT EXISTS vault_exams (
         id TEXT PRIMARY KEY,
         exam_name TEXT NOT NULL,
         question_paper_id TEXT,
@@ -75,7 +75,7 @@ async function initDb() {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
 
-      CREATE TABLE IF NOT EXISTS approvals (
+      CREATE TABLE IF NOT EXISTS vault_approvals (
         id TEXT PRIMARY KEY,
         question_paper_id TEXT,
         reviewer_id TEXT,
@@ -84,7 +84,7 @@ async function initDb() {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
 
-      CREATE TABLE IF NOT EXISTS audit_logs (
+      CREATE TABLE IF NOT EXISTS vault_audit_logs (
         id TEXT PRIMARY KEY,
         user_id TEXT,
         role TEXT,
@@ -96,7 +96,7 @@ async function initDb() {
         timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
 
-      CREATE TABLE IF NOT EXISTS access_attempts (
+      CREATE TABLE IF NOT EXISTS vault_access_attempts (
         id TEXT PRIMARY KEY,
         user_id TEXT,
         ip_address TEXT,
@@ -110,11 +110,11 @@ async function initDb() {
     isPg = true;
     console.log('[DB] Connected to PostgreSQL Database & initialized schema successfully.');
 
-    // Auto-seed default accounts and sample data if question_papers table is empty
+    // Auto-seed default accounts and sample data if vault_question_papers table is empty
     try {
-      const paperCountRes = await pool.query('SELECT COUNT(*) FROM question_papers');
+      const paperCountRes = await pool.query('SELECT COUNT(*) FROM vault_question_papers');
       if (parseInt(paperCountRes.rows[0].count) === 0) {
-        console.log('[DB] Question papers empty. Seeding initial sample papers and exams...');
+        console.log('[DB] vault_question_papers empty. Seeding initial sample papers and exams...');
         const seed = require('./seed');
         await seed();
       }
@@ -134,17 +134,9 @@ async function initDb() {
 
   sqliteDb = new sqlite3.Database(dbPath);
 
-  // Helper to run sqlite query as promise
-  const sqliteRun = (sql, params = []) => new Promise((resolve, reject) => {
-    sqliteDb.run(sql, params, function (err) {
-      if (err) reject(err);
-      else resolve(this);
-    });
-  });
-
   // Convert postgres syntax to sqlite schema
   const schemaSql = `
-    CREATE TABLE IF NOT EXISTS users (
+    CREATE TABLE IF NOT EXISTS vault_users (
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,
       email TEXT UNIQUE NOT NULL,
@@ -156,7 +148,7 @@ async function initDb() {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
-    CREATE TABLE IF NOT EXISTS question_papers (
+    CREATE TABLE IF NOT EXISTS vault_question_papers (
       id TEXT PRIMARY KEY,
       title TEXT NOT NULL,
       exam_name TEXT NOT NULL,
@@ -168,7 +160,7 @@ async function initDb() {
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
-    CREATE TABLE IF NOT EXISTS exams (
+    CREATE TABLE IF NOT EXISTS vault_exams (
       id TEXT PRIMARY KEY,
       exam_name TEXT NOT NULL,
       question_paper_id TEXT,
@@ -180,7 +172,7 @@ async function initDb() {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
-    CREATE TABLE IF NOT EXISTS approvals (
+    CREATE TABLE IF NOT EXISTS vault_approvals (
       id TEXT PRIMARY KEY,
       question_paper_id TEXT,
       reviewer_id TEXT,
@@ -189,7 +181,7 @@ async function initDb() {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
-    CREATE TABLE IF NOT EXISTS audit_logs (
+    CREATE TABLE IF NOT EXISTS vault_audit_logs (
       id TEXT PRIMARY KEY,
       user_id TEXT,
       role TEXT,
@@ -201,7 +193,7 @@ async function initDb() {
       timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
-    CREATE TABLE IF NOT EXISTS access_attempts (
+    CREATE TABLE IF NOT EXISTS vault_access_attempts (
       id TEXT PRIMARY KEY,
       user_id TEXT,
       ip_address TEXT,

@@ -10,7 +10,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-jwt-key-secure-exam-2
 async function recordAuditLog({ userId = null, role = 'GUEST', action, paperId = null, ipAddress, result, details = '' }) {
   try {
     await query(
-      `INSERT INTO audit_logs (id, user_id, role, action, question_paper_id, ip_address, result, details)
+      `INSERT INTO vault_audit_logs (id, user_id, role, action, question_paper_id, ip_address, result, details)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
       [uuidv4(), userId, role, action, paperId, ipAddress || '127.0.0.1', result, details]
     );
@@ -42,7 +42,7 @@ async function authenticateUser(req, res, next) {
     const decoded = jwt.verify(token, JWT_SECRET);
 
     // Fetch user from DB to verify current account status
-    const result = await query('SELECT id, name, email, role, status, locked_until FROM users WHERE id = $1', [decoded.id]);
+    const result = await query('SELECT id, name, email, role, status, locked_until FROM vault_users WHERE id = $1', [decoded.id]);
 
     if (result.rows.length === 0) {
       return res.status(401).json({ success: false, error: 'User account no longer exists.' });
@@ -72,7 +72,7 @@ async function authenticateUser(req, res, next) {
         });
       } else {
         // Lock expired, reset status
-        await query("UPDATE users SET status = 'ACTIVE', failed_attempts = 0, locked_until = NULL WHERE id = $1", [user.id]);
+        await query("UPDATE vault_users SET status = 'ACTIVE', failed_attempts = 0, locked_until = NULL WHERE id = $1", [user.id]);
       }
     }
 
