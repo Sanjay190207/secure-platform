@@ -1,0 +1,28 @@
+# Node modules
+node_modules/
+**/node_modules/
+
+# Local databases & storage vaults
+*.db
+local_dev_security.db
+storage_vault/
+**/storage_vault/
+
+# Environment variables
+.env
+.env.local
+*.env
+
+# Build outputs
+dist/
+build/
+.vercel/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS Files
+.DS_Store
+Thumbs.db
