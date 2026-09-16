@@ -4,7 +4,9 @@
   "private": true,
   "description": "Secure Cloud-Based Competitive Examination Question Paper Management System",
   "scripts": {
-    "build": "cd client && npm install && npm run build"
+    "build": "cd client && npm install && npm run build",
+    "dev:server": "cd server && npm run dev",
+    "dev:client": "cd client && npm run dev"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
