@@ -8,25 +8,8 @@ const IV_LENGTH = 16;
 const AUTH_TAG_LENGTH = 16;
 const SALT_LENGTH = 32;
 
-// Master Key for AES-256 (derived from JWT_SECRET or KMS Key if GCP credentials present)
-const MASTER_SECRET = process.env.JWT_SECRET || 'secure-kms-key-2026-exam-paper-management-secret';
-
-let kmsClient = null;
-let useGcpKms = false;
-
-// Initialize GCP KMS if credentials available
-try {
-  const kms = require('@google-cloud/kms');
-  if (process.env.GCP_KMS_KEY_NAME && process.env.GCP_PROJECT_ID) {
-    kmsClient = new kms.KeyManagementServiceClient();
-    useGcpKms = true;
-    console.log(`[CRYPTO/KMS] Connected to Google Cloud KMS Key: ${process.env.GCP_KMS_KEY_NAME}`);
-  } else {
-    console.log('[CRYPTO/KMS] GCP KMS Key not active locally. Using AES-256-GCM authenticated master key fallback...');
-  }
-} catch (e) {
-  console.log('[CRYPTO/KMS] Using AES-256-GCM authenticated master key fallback...');
-}
+// Master Key for AES-256 (derived from JWT_SECRET or default secret)
+const MASTER_SECRET = process.env.JWT_SECRET || 'secure-exam-paper-management-master-secret-2026';
 
 /**
  * Compute SHA-256 Hash Digest
@@ -94,6 +77,5 @@ module.exports = {
   computeSha256,
   encryptPaperBuffer,
   decryptPaperBuffer,
-  verifyPaperIntegrity,
-  isGcpKms: () => useGcpKms
+  verifyPaperIntegrity
 };

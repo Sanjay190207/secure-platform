@@ -1,7 +1,0 @@
-node_modules
-npm-debug.log
-.env
-local_dev_security.db
-storage_vault
-.git
-.gitignore
