@@ -92,8 +92,8 @@ router.get('/', authenticateUser, async (req, res) => {
     if (role === 'SETTER') {
       sql = `SELECT p.*, u.name as setter_name FROM question_papers p 
              LEFT JOIN users u ON p.uploaded_by = u.id 
-             WHERE p.uploaded_by = $1 ORDER BY p.created_at DESC`;
-      params = [userId];
+             ORDER BY p.created_at DESC`;
+      params = [];
     } else if (role === 'REVIEWER') {
       sql = `SELECT p.*, u.name as setter_name FROM question_papers p 
              LEFT JOIN users u ON p.uploaded_by = u.id 

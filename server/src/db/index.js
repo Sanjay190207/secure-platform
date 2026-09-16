@@ -103,11 +103,11 @@ async function initDb() {
     isPg = true;
     console.log('[DB] Connected to PostgreSQL Database & initialized schema successfully.');
 
-    // Auto-seed default accounts if database is empty
+    // Auto-seed default accounts and sample data if question_papers table is empty
     try {
-      const userCountRes = await pool.query('SELECT COUNT(*) FROM users');
-      if (parseInt(userCountRes.rows[0].count) === 0) {
-        console.log('[DB] Database is empty. Seeding initial accounts...');
+      const paperCountRes = await pool.query('SELECT COUNT(*) FROM question_papers');
+      if (parseInt(paperCountRes.rows[0].count) === 0) {
+        console.log('[DB] Question papers empty. Seeding initial sample papers and exams...');
         const seed = require('./seed');
         await seed();
       }
