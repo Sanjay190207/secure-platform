@@ -19,8 +19,9 @@ It provides tailored workflows for five distinct organizational roles:
 
 ## 📹 Project Execution Video Demonstration
 
-> 🎬 **Demonstration Video:** [Watch 2-3 Minute Micro Project Execution Video]https://github.com/Sanjay190207/secure-platform/raw/refs/heads/main/video/Cloud%20Project%20Naration.mp4
+The full project demonstration video is included directly in the repository within the `video/` directory (`video/Cloud Project Naration.mp4`).
 
+> 🎬 **Demonstration Video:** [Watch Project Execution Video](video/Cloud%20Project%20Naration.mp4) (or view directly on [GitHub](https://github.com/Sanjay190207/secure-platform/raw/refs/heads/main/video/Cloud%20Project%20Naration.mp4))
 
 ---
 
@@ -145,6 +146,7 @@ secure-platform/
 │   │   └── server.js           # Express app entrypoint & route registration
 │   └── package.json
 │
+├── video/                      # Demonstration video file (video/Cloud Project Naration.mp4)
 ├── supabase_schema_and_seed.sql # Complete Supabase SQL Editor schema script
 ├── vercel.json                  # Serverless deployment configuration
 └── README.md                    # Project documentation
