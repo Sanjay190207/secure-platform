@@ -17,6 +17,14 @@ It provides tailored workflows for five distinct organizational roles:
 
 ---
 
+## 📹 Project Execution Video Demonstration
+
+> 🎬 **Demonstration Video:** [Watch 2-3 Minute Micro Project Execution Video](YOUR_GITHUB_VIDEO_URL_HERE)
+
+*Note: Replace `YOUR_GITHUB_VIDEO_URL_HERE` with your uploaded video link.*
+
+---
+
 ## 🧰 Technologies & Tools Used
 
 ### **Frontend**
