@@ -20,6 +20,7 @@ It provides tailored workflows for five distinct organizational roles:
 ## 📹 Project Execution Video Demonstration
 
 The full project demonstration video is included directly in the repository within the `video/` directory (`video/Cloud Project Naration.mp4`).
+>Google Docs Link:*** https://drive.google.com/drive/folders/1yfVxgiqTw0lDPcDwpqaKOQbT3ysD1wVm?usp=sharing
 
 > 🎬 **Demonstration Video:** [Watch Project Execution Video](video/Cloud%20Project%20Naration.mp4) (or view directly on [GitHub](https://github.com/Sanjay190207/secure-platform/raw/refs/heads/main/video/Cloud%20Project%20Naration.mp4))
 
